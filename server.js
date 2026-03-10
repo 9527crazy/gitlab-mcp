@@ -36,7 +36,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     { name: "list_commits", description: "List commits of a project", inputSchema: { type: "object", properties: { project_id: { type: "number" } }, required: ["project_id"] } },
     { name: "get_file", description: "Get a file content", inputSchema: { type: "object", properties: { project_id: { type: "number" }, file_path: { type: "string" }, ref: { type: "string" } }, required: ["project_id","file_path","ref"] } },
     { name: "list_merge_requests", description: "List MR of project", inputSchema: { type: "object", properties: { project_id: { type: "number" } }, required: ["project_id"] } },
-    { name: "list_issues", description: "List issues of project", inputSchema: { type: "object", properties: { project_id: { type: "number" } }, required: ["project_id"] } }
+    { name: "list_issues", description: "List issues of project", inputSchema: { type: "object", properties: { project_id: { type: "number" }, state: { type: "string" }, labels: { type: "string" }, iids: { type: "array", items: { type: "number" } } }, required: ["project_id"] } },
+    { name: "create_issue", description: "Create an issue in a project", inputSchema: { type: "object", properties: { project_id: { type: "number" }, title: { type: "string" }, description: { type: "string" }, labels: { type: "string" }, assignee_ids: { type: "array", items: { type: "number" } }, due_date: { type: "string" }, confidential: { type: "boolean" }, issue_type: { type: "string" } }, required: ["project_id", "title"] } },
+    { name: "get_issue", description: "Get a single issue by project and issue IID", inputSchema: { type: "object", properties: { project_id: { type: "number" }, issue_iid: { type: "number" } }, required: ["project_id", "issue_iid"] } },
+    { name: "update_issue", description: "Update an issue (title, description, state_event close/reopen, labels, assignees, etc.)", inputSchema: { type: "object", properties: { project_id: { type: "number" }, issue_iid: { type: "number" }, title: { type: "string" }, description: { type: "string" }, state_event: { type: "string" }, labels: { type: "string" }, add_labels: { type: "string" }, remove_labels: { type: "string" }, assignee_ids: { type: "array", items: { type: "number" } }, due_date: { type: "string" }, milestone_id: { type: "number" }, confidential: { type: "boolean" }, discussion_locked: { type: "boolean" }, issue_type: { type: "string" } }, required: ["project_id", "issue_iid"] } },
+    { name: "delete_issue", description: "Delete an issue from a project", inputSchema: { type: "object", properties: { project_id: { type: "number" }, issue_iid: { type: "number" } }, required: ["project_id", "issue_iid"] } },
+    { name: "add_issue_note", description: "Add a comment/note to an issue", inputSchema: { type: "object", properties: { project_id: { type: "number" }, issue_iid: { type: "number" }, body: { type: "string" } }, required: ["project_id", "issue_iid", "body"] } },
+    { name: "list_issue_notes", description: "List notes/comments of an issue", inputSchema: { type: "object", properties: { project_id: { type: "number" }, issue_iid: { type: "number" } }, required: ["project_id", "issue_iid"] } }
   ]
 }));
 
@@ -67,13 +73,68 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (name === "list_issues") {
-      const res = await api.get(`/projects/${args.project_id}/issues`);
+      const params = {};
+      if (args.state != null) params.state = args.state;
+      if (args.labels != null) params.labels = args.labels;
+      if (args.iids != null && args.iids.length) params["iids[]"] = args.iids;
+      const res = await api.get(`/projects/${args.project_id}/issues`, { params });
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    }
+
+    if (name === "create_issue") {
+      const body = { title: args.title };
+      if (args.description != null) body.description = args.description;
+      if (args.labels != null) body.labels = args.labels;
+      if (args.assignee_ids != null) body.assignee_ids = Array.isArray(args.assignee_ids) ? args.assignee_ids : [args.assignee_ids];
+      if (args.due_date != null) body.due_date = args.due_date;
+      if (args.confidential != null) body.confidential = args.confidential;
+      if (args.issue_type != null) body.issue_type = args.issue_type;
+      const res = await api.post(`/projects/${args.project_id}/issues`, body);
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    }
+
+    if (name === "get_issue") {
+      const res = await api.get(`/projects/${args.project_id}/issues/${args.issue_iid}`);
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    }
+
+    if (name === "update_issue") {
+      const body = {};
+      if (args.title != null) body.title = args.title;
+      if (args.description != null) body.description = args.description;
+      if (args.state_event != null) body.state_event = args.state_event;
+      if (args.labels != null) body.labels = args.labels;
+      if (args.add_labels != null) body.add_labels = args.add_labels;
+      if (args.remove_labels != null) body.remove_labels = args.remove_labels;
+      if (args.assignee_ids != null) body.assignee_ids = Array.isArray(args.assignee_ids) ? args.assignee_ids : [args.assignee_ids];
+      if (args.due_date != null) body.due_date = args.due_date;
+      if (args.milestone_id != null) body.milestone_id = args.milestone_id;
+      if (args.confidential != null) body.confidential = args.confidential;
+      if (args.discussion_locked != null) body.discussion_locked = args.discussion_locked;
+      if (args.issue_type != null) body.issue_type = args.issue_type;
+      const res = await api.put(`/projects/${args.project_id}/issues/${args.issue_iid}`, body);
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    }
+
+    if (name === "delete_issue") {
+      await api.delete(`/projects/${args.project_id}/issues/${args.issue_iid}`);
+      return { content: [{ type: "text", text: "Issue deleted successfully." }] };
+    }
+
+    if (name === "add_issue_note") {
+      const res = await api.post(`/projects/${args.project_id}/issues/${args.issue_iid}/notes`, { body: args.body });
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    }
+
+    if (name === "list_issue_notes") {
+      const res = await api.get(`/projects/${args.project_id}/issues/${args.issue_iid}/notes`);
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     }
 
     return { content: [{ type: "text", text: "Tool not implemented" }] };
   } catch (e) {
-    return { content: [{ type: "text", text: `Error: ${e.message}` }] };
+    const errMsg = e.response?.data ? JSON.stringify(e.response.data) : e.message;
+    return { content: [{ type: "text", text: `Error: ${errMsg}` }] };
   }
 });
 
