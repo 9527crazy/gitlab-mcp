@@ -8,13 +8,19 @@
 - **list_commits** — List repository commits for a project
 - **get_file** — Get file content from a project at a given ref (branch/tag/commit)
 - **list_merge_requests** — List merge requests for a project
-- **list_issues** — List issues for a project
+- **list_issues** — List issues for a project (optional: state, labels, iids)
+- **create_issue** — Create an issue in a project
+- **get_issue** — Get a single issue by project and issue IID
+- **update_issue** — Update an issue (title, description, state_event, labels, assignees, etc.)
+- **delete_issue** — Delete an issue from a project
+- **add_issue_note** — Add a comment/note to an issue
+- **list_issue_notes** — List notes/comments of an issue
 
 ## Requirements
 
 - Node.js 18+
 - GitLab instance (self-hosted or GitLab.com)
-- GitLab [Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) or [Project/Group Access Token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) with `read_api` scope
+- GitLab [Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) or [Project/Group Access Token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) with `read_api` (and `api` for creating/updating/deleting issues and adding notes)
 
 ## Installation
 
@@ -104,15 +110,21 @@ Or with explicit path to `server.js`:
 
 ## Tools Reference
 
-| Tool                  | Parameters                          | Description                    |
-|-----------------------|-------------------------------------|--------------------------------|
-| `list_projects`       | —                                   | List projects (membership, per_page=100) |
-| `list_commits`        | `project_id` (number)               | List commits for project       |
-| `get_file`            | `project_id`, `file_path`, `ref`    | Get file content at ref        |
-| `list_merge_requests` | `project_id` (number)               | List MRs for project           |
-| `list_issues`         | `project_id` (number)               | List issues for project        |
+| Tool                   | Parameters                                      | Description |
+|------------------------|--------------------------------------------------|-------------|
+| `list_projects`        | —                                               | List projects (membership, per_page=100) |
+| `list_commits`         | `project_id` (number)                            | List commits for project |
+| `get_file`             | `project_id`, `file_path`, `ref`                 | Get file content at ref |
+| `list_merge_requests`  | `project_id` (number)                            | List MRs for project |
+| `list_issues`          | `project_id` (number), *optional:* `state`, `labels`, `iids` | List issues for project |
+| `create_issue`         | `project_id`, `title`, *optional:* `description`, `labels`, `assignee_ids`, `due_date`, `confidential`, `issue_type` | Create an issue |
+| `get_issue`            | `project_id`, `issue_iid`                        | Get a single issue |
+| `update_issue`         | `project_id`, `issue_iid`, *optional:* `title`, `description`, `state_event`, `labels`, `add_labels`, `remove_labels`, `assignee_ids`, `due_date`, `milestone_id`, `confidential`, `discussion_locked`, `issue_type` | Update an issue |
+| `delete_issue`         | `project_id`, `issue_iid`                        | Delete an issue |
+| `add_issue_note`       | `project_id`, `issue_iid`, `body`                | Add a comment/note to an issue |
+| `list_issue_notes`     | `project_id`, `issue_iid`                        | List notes/comments of an issue |
 
-Project IDs can be the numeric project ID or the URL-encoded path (e.g. `group%2Fproject`).
+Project IDs are numeric. Issue IID is the project-internal issue number (e.g. `#3` → `issue_iid: 3`).
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "name": "@butterfly-liu/gitlab-mcp",
-  "version": "1.0.1",
-  "description": "MCP (Model Context Protocol) server for GitLab: list projects, commits, files, merge requests, and issues.",
+  "version": "1.0.2",
+  "description": "MCP (Model Context Protocol) server for GitLab: list projects, commits, files, merge requests; list/create/update/delete issues and add or list issue notes.",
   "type": "module",
   "main": "server.js",
   "bin": {
