@@ -1,15 +1,14 @@
 {
-  "name": "gitlab-mcp",
-  "version": "1.0.0",
+  "name": "@butterfly-liu/gitlab-mcp",
+  "version": "1.0.1",
   "description": "MCP (Model Context Protocol) server for GitLab: list projects, commits, files, merge requests, and issues.",
   "type": "module",
   "main": "server.js",
   "bin": {
-    "gitlab-mcp": "./server.js"
+    "gitlab-mcp": "server.js"
   },
   "scripts": {
-    "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
   "keywords": [
     "mcp",
@@ -23,12 +22,16 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "git+https://github.com/9527crazy/gitlab-mcp.git"
   },
   "bugs": {
-    "url": ""
+    "url": "https://github.com/9527crazy/gitlab-mcp/issues"
   },
-  "homepage": "",
+  "homepage": "https://github.com/9527crazy/gitlab-mcp#readme",
+  "files": [
+    "server.js",
+    "README.md"
+  ],
   "engines": {
     "node": ">=18"
   },

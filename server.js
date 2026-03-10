@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // server.js
 import axios from "axios";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -7,9 +8,14 @@ import {
   CallToolRequestSchema
 } from "@modelcontextprotocol/sdk/types.js";
 
-// 配置 GitLab URL 和 Token
-const GITLAB_URL = process.env.GITLAB_URL || "http://192.168.3.11";
-const TOKEN = process.env.GITLAB_TOKEN || "glpat-xxxxxxxx";
+// 配置 GitLab URL 和 Token（发布到 npm 后需通过环境变量配置，不设默认 token）
+const GITLAB_URL = process.env.GITLAB_URL || "https://gitlab.com";
+const TOKEN = process.env.GITLAB_TOKEN || "";
+
+if (!TOKEN) {
+  console.error("Error: GITLAB_TOKEN is required. Set it in your environment or MCP client config.");
+  process.exit(1);
+}
 
 const api = axios.create({
   baseURL: `${GITLAB_URL}/api/v4`,

@@ -18,18 +18,28 @@
 
 ## Installation
 
+From npm :
+
 ```bash
-npm install
+npm install -g @butterfly-liu/gitlab-mcp
+# or as project dependency
+npm install @butterfly-liu/gitlab-mcp
+```
+
+Or clone and install locally:
+
+```bash
+git clone https://github.com/9527crazy/gitlab-mcp.git && cd gitlab-mcp && npm install
 ```
 
 ## Configuration
 
-Set environment variables before running the server:
+**Required:** Set `GITLAB_TOKEN` in your environment or MCP client config. The server will exit with an error if it is missing.
 
-| Variable      | Description                    | Default (example)     |
-|---------------|--------------------------------|------------------------|
-| `GITLAB_URL`  | GitLab base URL (no trailing slash) | `http://192.168.3.11` |
-| `GITLAB_TOKEN`| API token (e.g. `glpat-xxxx`)  | `glpat-xxxxxxxx`       |
+| Variable       | Description                         | Default           |
+|----------------|-------------------------------------|-------------------|
+| `GITLAB_URL`   | GitLab base URL (no trailing slash) | `https://gitlab.com` |
+| `GITLAB_TOKEN` | API token (e.g. `glpat-xxxx`)       | *required*        |
 
 Example:
 
@@ -46,19 +56,36 @@ export GITLAB_TOKEN="glpat-your-token-here"
 
 ```bash
 node server.js
+# or if installed globally
+gitlab-mcp
 ```
 
-Or via npm:
-
-```bash
-npm start
-```
+Or in a project with `npm start` or `npx gitlab-mcp`.
 
 The server uses stdio transport and is intended to be launched by an MCP client (e.g. Cursor MCP settings).
 
 ### Cursor configuration
 
-Add to Cursor MCP settings (e.g. `~/.cursor/mcp.json` or project MCP config):
+Add to Cursor MCP settings (e.g. `~/.cursor/mcp.json` or project MCP config).
+
+When installed from npm (global or local `node_modules`):
+
+```json
+{
+  "mcpServers": {
+    "gitlab": {
+      "command": "npx",
+      "args": ["@butterfly-liu/gitlab-mcp"],
+      "env": {
+        "GITLAB_URL": "https://gitlab.com",
+        "GITLAB_TOKEN": "glpat-your-token"
+      }
+    }
+  }
+}
+```
+
+Or with explicit path to `server.js`:
 
 ```json
 {
@@ -75,8 +102,6 @@ Add to Cursor MCP settings (e.g. `~/.cursor/mcp.json` or project MCP config):
 }
 ```
 
-Replace `/path/to/gitlab-mcp` with the actual path to this project.
-
 ## Tools Reference
 
 | Tool                  | Parameters                          | Description                    |
@@ -88,6 +113,22 @@ Replace `/path/to/gitlab-mcp` with the actual path to this project.
 | `list_issues`         | `project_id` (number)               | List issues for project        |
 
 Project IDs can be the numeric project ID or the URL-encoded path (e.g. `group%2Fproject`).
+
+---
+
+## Publishing to npm (maintainers)
+
+**Note:** The unscoped name `gitlab-mcp` is already taken on npm. Publish under a scoped name, e.g. `@butterfly-liu/gitlab-mcp`.
+
+Before first publish:
+
+1. **Set package name** in `package.json`: Package name is `@butterfly-liu/gitlab-mcp` (use your npm username as scope if different).
+2. **Fill repo URLs** in `package.json`: Replace `your-username` in `repository`, `bugs`, and `homepage` with your GitHub/GitLab username or org.
+3. **Login**: `npm login` (create account at [npmjs.com](https://www.npmjs.com/) if needed).
+4. **Preview tarball**: `npm pack --dry-run` — only `server.js` and `README.md` are included (see `files` in package.json).
+5. **Publish**: `npm publish --access public` (required for scoped packages to be installable by everyone).
+
+After code changes: bump `version` (e.g. `npm version patch`) then `npm publish --access public`.
 
 ## License
 
