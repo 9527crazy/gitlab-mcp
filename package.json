@@ -1,0 +1,39 @@
+{
+  "name": "gitlab-mcp",
+  "version": "1.0.0",
+  "description": "MCP (Model Context Protocol) server for GitLab: list projects, commits, files, merge requests, and issues.",
+  "type": "module",
+  "main": "server.js",
+  "bin": {
+    "gitlab-mcp": "./server.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "gitlab",
+    "cursor",
+    "claude",
+    "api"
+  ],
+  "author": "liu2840161508@gmail.com",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "bugs": {
+    "url": ""
+  },
+  "homepage": "",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "axios": "^1.13.6"
+  }
+}
