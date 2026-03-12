@@ -1,6 +1,6 @@
 # GitLab MCP
 
-[Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for GitLab. Exposes GitLab projects, commits, files, merge requests, and issues as MCP tools for use in Cursor, Claude Desktop, or other MCP clients.
+[Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for GitLab. Exposes GitLab projects, commits, files, merge requests, issues, and wiki pages as MCP tools for use in Cursor, Claude Desktop, or other MCP clients.
 
 ## Features
 
@@ -15,12 +15,17 @@
 - **delete_issue** — Delete an issue from a project
 - **add_issue_note** — Add a comment/note to an issue
 - **list_issue_notes** — List notes/comments of an issue
+- **list_wiki_pages** — List all wiki pages of a project
+- **get_wiki_page** — Get a single wiki page by slug
+- **create_wiki_page** — Create a new wiki page
+- **update_wiki_page** — Update an existing wiki page
+- **delete_wiki_page** — Delete a wiki page
 
 ## Requirements
 
 - Node.js 18+
 - GitLab instance (self-hosted or GitLab.com)
-- GitLab [Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) or [Project/Group Access Token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) with `read_api` (and `api` for creating/updating/deleting issues and adding notes)
+- GitLab [Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) or [Project/Group Access Token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) with `read_api` (and `api` for creating/updating/deleting issues, adding notes, and managing wiki pages)
 
 ## Installation
 
@@ -123,8 +128,13 @@ Or with explicit path to `server.js`:
 | `delete_issue`         | `project_id`, `issue_iid`                        | Delete an issue |
 | `add_issue_note`       | `project_id`, `issue_iid`, `body`                | Add a comment/note to an issue |
 | `list_issue_notes`     | `project_id`, `issue_iid`                        | List notes/comments of an issue |
+| `list_wiki_pages`      | `project_id` (number), *optional:* `with_content` | List all wiki pages of a project |
+| `get_wiki_page`        | `project_id`, `slug`, *optional:* `render_html`, `version` | Get a single wiki page by slug |
+| `create_wiki_page`     | `project_id`, `title`, `content`, *optional:* `format` | Create a new wiki page |
+| `update_wiki_page`     | `project_id`, `slug`, *optional:* `title`, `content`, `format` | Update an existing wiki page (at least title or content) |
+| `delete_wiki_page`     | `project_id`, `slug`                             | Delete a wiki page |
 
-Project IDs are numeric. Issue IID is the project-internal issue number (e.g. `#3` → `issue_iid: 3`).
+Project IDs are numeric. Wiki page slug is the URL-friendly identifier (e.g. from title; use the slug returned by create/list/get). Issue IID is the project-internal issue number (e.g. `#3` → `issue_iid: 3`).
 
 ---
 
