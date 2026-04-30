@@ -29,11 +29,80 @@ const server = new Server(
   { capabilities: { tools: {} } }
 );
 
+const toDateString = (date) => date.toISOString().slice(0, 10);
+
+const addDays = (date, days) => {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+};
+
+const normalizeDate = (value, fallback) => {
+  if (value == null || value === "") return fallback;
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new Error("Dates must use YYYY-MM-DD format.");
+  }
+  return value;
+};
+
+const contributionLevel = (count) => {
+  if (count === 0) return 0;
+  if (count < 10) return 1;
+  if (count < 20) return 2;
+  if (count <= 30) return 3;
+  return 4;
+};
+
+const buildContributionActivity = (events, after, before) => {
+  const counts = new Map();
+
+  for (const event of events) {
+    if (!event.created_at) continue;
+    const date = event.created_at.slice(0, 10);
+    counts.set(date, (counts.get(date) || 0) + 1);
+  }
+
+  const start = new Date(`${after}T00:00:00.000Z`);
+  const end = new Date(`${before}T00:00:00.000Z`);
+  const days = [];
+
+  for (let cursor = start; cursor <= end; cursor = addDays(cursor, 1)) {
+    const date = toDateString(cursor);
+    const count = counts.get(date) || 0;
+    days.push({
+      date,
+      count,
+      level: contributionLevel(count)
+    });
+  }
+
+  const weeks = [];
+  for (const day of days) {
+    const dayOfWeek = new Date(`${day.date}T00:00:00.000Z`).getUTCDay();
+    if (weeks.length === 0 || dayOfWeek === 0) {
+      weeks.push([]);
+    }
+    weeks[weeks.length - 1].push(day);
+  }
+
+  return {
+    total_contributions: days.reduce((sum, day) => sum + day.count, 0),
+    days,
+    weeks
+  };
+};
+
+const getAuthenticatedUserId = async () => {
+  const res = await api.get("/user");
+  return res.data.id;
+};
+
 // 定义 MCP 工具
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     { name: "list_projects", description: "List all GitLab projects", inputSchema: { type: "object" } },
     { name: "list_commits", description: "List commits of a project", inputSchema: { type: "object", properties: { project_id: { type: "number" } }, required: ["project_id"] } },
+    { name: "get_contribution_activity", description: "Get a user's contribution heatmap activity aggregated by day. Defaults to the authenticated user and the last 12 months.", inputSchema: { type: "object", properties: { user_id: { oneOf: [{ type: "number" }, { type: "string" }], description: "GitLab user ID or username. If omitted, uses the authenticated user." }, after: { type: "string", description: "Start date in YYYY-MM-DD format. Defaults to 12 months ago." }, before: { type: "string", description: "End date in YYYY-MM-DD format. Defaults to today." }, action: { type: "string", description: "Optional GitLab event action filter, such as pushed, created, merged, closed, commented." }, target_type: { type: "string", description: "Optional GitLab event target type filter, such as issue, merge_request, note, project, snippet, milestone, user." }, include_events: { type: "boolean", description: "Include raw GitLab events in the response. Defaults to false." }, max_pages: { type: "number", description: "Maximum event pages to fetch at 100 events per page. Defaults to 20." } } } },
     { name: "get_file", description: "Get a file content", inputSchema: { type: "object", properties: { project_id: { type: "number" }, file_path: { type: "string" }, ref: { type: "string" } }, required: ["project_id","file_path","ref"] } },
     { name: "list_merge_requests", description: "List MR of project", inputSchema: { type: "object", properties: { project_id: { type: "number" } }, required: ["project_id"] } },
     { name: "list_issues", description: "List issues of project", inputSchema: { type: "object", properties: { project_id: { type: "number" }, state: { type: "string" }, labels: { type: "string" }, iids: { type: "array", items: { type: "number" } } }, required: ["project_id"] } },
@@ -53,7 +122,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 
 // MCP 调用处理
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
+  const { name, arguments: rawArgs } = request.params;
+  const args = rawArgs || {};
 
   try {
     if (name === "list_projects") {
@@ -64,6 +134,60 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === "list_commits") {
       const res = await api.get(`/projects/${args.project_id}/repository/commits`);
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    }
+
+    if (name === "get_contribution_activity") {
+      const today = new Date();
+      const defaultBefore = toDateString(today);
+      const defaultAfter = toDateString(addDays(today, -365));
+      const after = normalizeDate(args.after, defaultAfter);
+      const before = normalizeDate(args.before, defaultBefore);
+
+      if (after > before) {
+        return { content: [{ type: "text", text: "Error: after must be earlier than or equal to before." }] };
+      }
+
+      const userId = args.user_id != null && args.user_id !== "" ? args.user_id : await getAuthenticatedUserId();
+      const requestedMaxPages = Number(args.max_pages ?? 20);
+      if (!Number.isFinite(requestedMaxPages) || requestedMaxPages < 1) {
+        return { content: [{ type: "text", text: "Error: max_pages must be a positive number." }] };
+      }
+      const maxPages = Math.min(Math.floor(requestedMaxPages), 100);
+      const params = {
+        after,
+        before,
+        sort: "asc",
+        per_page: 100
+      };
+      if (args.action != null) params.action = args.action;
+      if (args.target_type != null) params.target_type = args.target_type;
+
+      const events = [];
+      let page = 1;
+
+      while (page <= maxPages) {
+        const res = await api.get(`/users/${encodeURIComponent(userId)}/events`, {
+          params: { ...params, page }
+        });
+        events.push(...res.data);
+
+        const nextPage = res.headers["x-next-page"];
+        if (!nextPage) break;
+        page = Number(nextPage);
+      }
+
+      const activity = buildContributionActivity(events, after, before);
+      const result = {
+        user_id: userId,
+        after,
+        before,
+        fetched_events: events.length,
+        truncated: page > maxPages,
+        ...activity
+      };
+      if (args.include_events === true) result.events = events;
+
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
 
     if (name === "get_file") {

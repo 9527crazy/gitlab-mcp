@@ -6,6 +6,7 @@
 
 - **list_projects** — List all GitLab projects (membership-based, up to 100)
 - **list_commits** — List repository commits for a project
+- **get_contribution_activity** — Get a user's contribution heatmap activity aggregated by day
 - **get_file** — Get file content from a project at a given ref (branch/tag/commit)
 - **list_merge_requests** — List merge requests for a project
 - **list_issues** — List issues for a project (optional: state, labels, iids)
@@ -25,7 +26,7 @@
 
 - Node.js 18+
 - GitLab instance (self-hosted or GitLab.com)
-- GitLab [Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) or [Project/Group Access Token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) with `read_api` (and `api` for creating/updating/deleting issues, adding notes, and managing wiki pages)
+- GitLab [Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) or [Project/Group Access Token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) with `read_api` for read operations, `read_user` or `api` for contribution activity, and `api` for creating/updating/deleting issues, adding notes, and managing wiki pages
 
 ## Installation
 
@@ -119,6 +120,7 @@ Or with explicit path to `server.js`:
 |------------------------|--------------------------------------------------|-------------|
 | `list_projects`        | —                                               | List projects (membership, per_page=100) |
 | `list_commits`         | `project_id` (number)                            | List commits for project |
+| `get_contribution_activity` | *optional:* `user_id`, `after`, `before`, `action`, `target_type`, `include_events`, `max_pages` | Get contribution heatmap activity aggregated by day. Defaults to the authenticated user and the last 12 months |
 | `get_file`             | `project_id`, `file_path`, `ref`                 | Get file content at ref |
 | `list_merge_requests`  | `project_id` (number)                            | List MRs for project |
 | `list_issues`          | `project_id` (number), *optional:* `state`, `labels`, `iids` | List issues for project |
