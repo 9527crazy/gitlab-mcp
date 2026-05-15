@@ -97,6 +97,18 @@ const getAuthenticatedUserId = async () => {
   return res.data.id;
 };
 
+const addOptionalFields = (target, source, fields) => {
+  for (const field of fields) {
+    if (source[field] != null) target[field] = source[field];
+  }
+  return target;
+};
+
+const normalizeArray = (value) => {
+  if (value == null) return value;
+  return Array.isArray(value) ? value : [value];
+};
+
 // 定义 MCP 工具
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
@@ -104,7 +116,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     { name: "list_commits", description: "List commits of a project", inputSchema: { type: "object", properties: { project_id: { type: "number" } }, required: ["project_id"] } },
     { name: "get_contribution_activity", description: "Get a user's contribution heatmap activity aggregated by day. Defaults to the authenticated user and the last 12 months.", inputSchema: { type: "object", properties: { user_id: { oneOf: [{ type: "number" }, { type: "string" }], description: "GitLab user ID or username. If omitted, uses the authenticated user." }, after: { type: "string", description: "Start date in YYYY-MM-DD format. Defaults to 12 months ago." }, before: { type: "string", description: "End date in YYYY-MM-DD format. Defaults to today." }, action: { type: "string", description: "Optional GitLab event action filter, such as pushed, created, merged, closed, commented." }, target_type: { type: "string", description: "Optional GitLab event target type filter, such as issue, merge_request, note, project, snippet, milestone, user." }, include_events: { type: "boolean", description: "Include raw GitLab events in the response. Defaults to false." }, max_pages: { type: "number", description: "Maximum event pages to fetch at 100 events per page. Defaults to 20." } } } },
     { name: "get_file", description: "Get a file content", inputSchema: { type: "object", properties: { project_id: { type: "number" }, file_path: { type: "string" }, ref: { type: "string" } }, required: ["project_id","file_path","ref"] } },
-    { name: "list_merge_requests", description: "List MR of project", inputSchema: { type: "object", properties: { project_id: { type: "number" } }, required: ["project_id"] } },
+    { name: "list_merge_requests", description: "List merge requests of a project", inputSchema: { type: "object", properties: { project_id: { type: "number" }, state: { type: "string" }, source_branch: { type: "string" }, target_branch: { type: "string" }, author_id: { type: "number" }, assignee_id: { type: "number" }, reviewer_id: { type: "number" }, labels: { type: "string" }, search: { type: "string" }, iids: { type: "array", items: { type: "number" } } }, required: ["project_id"] } },
+    { name: "create_merge_request", description: "Create a merge request in a project", inputSchema: { type: "object", properties: { project_id: { type: "number" }, source_branch: { type: "string" }, target_branch: { type: "string" }, title: { type: "string" }, description: { type: "string" }, target_project_id: { type: "number" }, assignee_id: { type: "number" }, assignee_ids: { type: "array", items: { type: "number" } }, reviewer_ids: { type: "array", items: { type: "number" } }, labels: { type: "string" }, milestone_id: { type: "number" }, remove_source_branch: { type: "boolean" }, squash: { type: "boolean" }, allow_collaboration: { type: "boolean" }, draft: { type: "boolean" } }, required: ["project_id", "source_branch", "target_branch", "title"] } },
+    { name: "get_merge_request", description: "Get a single merge request by project and MR IID", inputSchema: { type: "object", properties: { project_id: { type: "number" }, merge_request_iid: { type: "number" } }, required: ["project_id", "merge_request_iid"] } },
+    { name: "update_merge_request", description: "Update a merge request (title, description, target_branch, state_event close/reopen, labels, assignees, reviewers, etc.)", inputSchema: { type: "object", properties: { project_id: { type: "number" }, merge_request_iid: { type: "number" }, target_branch: { type: "string" }, title: { type: "string" }, description: { type: "string" }, state_event: { type: "string" }, assignee_id: { type: "number" }, assignee_ids: { type: "array", items: { type: "number" } }, reviewer_ids: { type: "array", items: { type: "number" } }, labels: { type: "string" }, add_labels: { type: "string" }, remove_labels: { type: "string" }, milestone_id: { type: "number" }, remove_source_branch: { type: "boolean" }, squash: { type: "boolean" }, discussion_locked: { type: "boolean" }, allow_collaboration: { type: "boolean" } }, required: ["project_id", "merge_request_iid"] } },
+    { name: "merge_merge_request", description: "Accept/merge a merge request", inputSchema: { type: "object", properties: { project_id: { type: "number" }, merge_request_iid: { type: "number" }, merge_commit_message: { type: "string" }, squash_commit_message: { type: "string" }, squash: { type: "boolean" }, should_remove_source_branch: { type: "boolean" }, auto_merge: { type: "boolean" }, merge_when_pipeline_succeeds: { type: "boolean", description: "Deprecated by GitLab 17.11; use auto_merge for newer GitLab versions." }, sha: { type: "string" } }, required: ["project_id", "merge_request_iid"] } },
+    { name: "add_merge_request_note", description: "Add a comment/note to a merge request", inputSchema: { type: "object", properties: { project_id: { type: "number" }, merge_request_iid: { type: "number" }, body: { type: "string" } }, required: ["project_id", "merge_request_iid", "body"] } },
+    { name: "list_merge_request_notes", description: "List notes/comments of a merge request", inputSchema: { type: "object", properties: { project_id: { type: "number" }, merge_request_iid: { type: "number" } }, required: ["project_id", "merge_request_iid"] } },
     { name: "list_issues", description: "List issues of project", inputSchema: { type: "object", properties: { project_id: { type: "number" }, state: { type: "string" }, labels: { type: "string" }, iids: { type: "array", items: { type: "number" } } }, required: ["project_id"] } },
     { name: "create_issue", description: "Create an issue in a project", inputSchema: { type: "object", properties: { project_id: { type: "number" }, title: { type: "string" }, description: { type: "string" }, labels: { type: "string" }, assignee_ids: { type: "array", items: { type: "number" } }, due_date: { type: "string" }, confidential: { type: "boolean" }, issue_type: { type: "string" } }, required: ["project_id", "title"] } },
     { name: "get_issue", description: "Get a single issue by project and issue IID", inputSchema: { type: "object", properties: { project_id: { type: "number" }, issue_iid: { type: "number" } }, required: ["project_id", "issue_iid"] } },
@@ -197,7 +215,55 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (name === "list_merge_requests") {
-      const res = await api.get(`/projects/${args.project_id}/merge_requests`);
+      const params = {};
+      addOptionalFields(params, args, ["state", "source_branch", "target_branch", "author_id", "assignee_id", "reviewer_id", "labels", "search"]);
+      if (args.iids != null && args.iids.length) params["iids[]"] = args.iids;
+      const res = await api.get(`/projects/${args.project_id}/merge_requests`, { params });
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    }
+
+    if (name === "create_merge_request") {
+      const body = {
+        source_branch: args.source_branch,
+        target_branch: args.target_branch,
+        title: args.title
+      };
+      addOptionalFields(body, args, ["description", "target_project_id", "assignee_id", "labels", "milestone_id", "remove_source_branch", "squash", "allow_collaboration", "draft"]);
+      if (args.assignee_ids != null) body.assignee_ids = normalizeArray(args.assignee_ids);
+      if (args.reviewer_ids != null) body.reviewer_ids = normalizeArray(args.reviewer_ids);
+      const res = await api.post(`/projects/${args.project_id}/merge_requests`, body);
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    }
+
+    if (name === "get_merge_request") {
+      const res = await api.get(`/projects/${args.project_id}/merge_requests/${args.merge_request_iid}`);
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    }
+
+    if (name === "update_merge_request") {
+      const body = {};
+      addOptionalFields(body, args, ["target_branch", "title", "description", "state_event", "assignee_id", "labels", "add_labels", "remove_labels", "milestone_id", "remove_source_branch", "squash", "discussion_locked", "allow_collaboration"]);
+      if (args.assignee_ids != null) body.assignee_ids = normalizeArray(args.assignee_ids);
+      if (args.reviewer_ids != null) body.reviewer_ids = normalizeArray(args.reviewer_ids);
+      if (Object.keys(body).length === 0) return { content: [{ type: "text", text: "Error: provide at least one field to update." }] };
+      const res = await api.put(`/projects/${args.project_id}/merge_requests/${args.merge_request_iid}`, body);
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    }
+
+    if (name === "merge_merge_request") {
+      const body = {};
+      addOptionalFields(body, args, ["merge_commit_message", "squash_commit_message", "squash", "should_remove_source_branch", "auto_merge", "merge_when_pipeline_succeeds", "sha"]);
+      const res = await api.put(`/projects/${args.project_id}/merge_requests/${args.merge_request_iid}/merge`, body);
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    }
+
+    if (name === "add_merge_request_note") {
+      const res = await api.post(`/projects/${args.project_id}/merge_requests/${args.merge_request_iid}/notes`, { body: args.body });
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    }
+
+    if (name === "list_merge_request_notes") {
+      const res = await api.get(`/projects/${args.project_id}/merge_requests/${args.merge_request_iid}/notes`);
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     }
 
@@ -214,7 +280,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const body = { title: args.title };
       if (args.description != null) body.description = args.description;
       if (args.labels != null) body.labels = args.labels;
-      if (args.assignee_ids != null) body.assignee_ids = Array.isArray(args.assignee_ids) ? args.assignee_ids : [args.assignee_ids];
+      if (args.assignee_ids != null) body.assignee_ids = normalizeArray(args.assignee_ids);
       if (args.due_date != null) body.due_date = args.due_date;
       if (args.confidential != null) body.confidential = args.confidential;
       if (args.issue_type != null) body.issue_type = args.issue_type;
@@ -235,7 +301,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (args.labels != null) body.labels = args.labels;
       if (args.add_labels != null) body.add_labels = args.add_labels;
       if (args.remove_labels != null) body.remove_labels = args.remove_labels;
-      if (args.assignee_ids != null) body.assignee_ids = Array.isArray(args.assignee_ids) ? args.assignee_ids : [args.assignee_ids];
+      if (args.assignee_ids != null) body.assignee_ids = normalizeArray(args.assignee_ids);
       if (args.due_date != null) body.due_date = args.due_date;
       if (args.milestone_id != null) body.milestone_id = args.milestone_id;
       if (args.confidential != null) body.confidential = args.confidential;

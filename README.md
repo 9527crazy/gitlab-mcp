@@ -9,6 +9,12 @@
 - **get_contribution_activity** — Get a user's contribution heatmap activity aggregated by day
 - **get_file** — Get file content from a project at a given ref (branch/tag/commit)
 - **list_merge_requests** — List merge requests for a project
+- **create_merge_request** — Create/submit a merge request
+- **get_merge_request** — Get a single merge request by project and MR IID
+- **update_merge_request** — Update a merge request
+- **merge_merge_request** — Accept/merge a merge request
+- **add_merge_request_note** — Add a comment/note to a merge request
+- **list_merge_request_notes** — List notes/comments of a merge request
 - **list_issues** — List issues for a project (optional: state, labels, iids)
 - **create_issue** — Create an issue in a project
 - **get_issue** — Get a single issue by project and issue IID
@@ -26,7 +32,7 @@
 
 - Node.js 18+
 - GitLab instance (self-hosted or GitLab.com)
-- GitLab [Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) or [Project/Group Access Token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) with `read_api` for read operations, `read_user` or `api` for contribution activity, and `api` for creating/updating/deleting issues, adding notes, and managing wiki pages
+- GitLab [Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) or [Project/Group Access Token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) with `read_api` for read operations, `read_user` or `api` for contribution activity, and `api` for creating/updating/merging merge requests, creating/updating/deleting issues, adding notes, and managing wiki pages
 
 ## Installation
 
@@ -122,7 +128,13 @@ Or with explicit path to `server.js`:
 | `list_commits`         | `project_id` (number)                            | List commits for project |
 | `get_contribution_activity` | *optional:* `user_id`, `after`, `before`, `action`, `target_type`, `include_events`, `max_pages` | Get contribution heatmap activity aggregated by day. Defaults to the authenticated user and the last 12 months |
 | `get_file`             | `project_id`, `file_path`, `ref`                 | Get file content at ref |
-| `list_merge_requests`  | `project_id` (number)                            | List MRs for project |
+| `list_merge_requests`  | `project_id` (number), *optional:* `state`, `source_branch`, `target_branch`, `author_id`, `assignee_id`, `reviewer_id`, `labels`, `search`, `iids` | List MRs for project |
+| `create_merge_request` | `project_id`, `source_branch`, `target_branch`, `title`, *optional:* `description`, `target_project_id`, `assignee_id`, `assignee_ids`, `reviewer_ids`, `labels`, `milestone_id`, `remove_source_branch`, `squash`, `allow_collaboration`, `draft` | Create/submit a merge request |
+| `get_merge_request`    | `project_id`, `merge_request_iid`                 | Get a single MR |
+| `update_merge_request` | `project_id`, `merge_request_iid`, *optional:* `target_branch`, `title`, `description`, `state_event`, `assignee_id`, `assignee_ids`, `reviewer_ids`, `labels`, `add_labels`, `remove_labels`, `milestone_id`, `remove_source_branch`, `squash`, `discussion_locked`, `allow_collaboration` | Update an MR |
+| `merge_merge_request`  | `project_id`, `merge_request_iid`, *optional:* `merge_commit_message`, `squash_commit_message`, `squash`, `should_remove_source_branch`, `auto_merge`, `merge_when_pipeline_succeeds`, `sha` | Accept/merge an MR. `merge_when_pipeline_succeeds` is deprecated by GitLab 17.11; prefer `auto_merge` on newer GitLab versions |
+| `add_merge_request_note` | `project_id`, `merge_request_iid`, `body`       | Add a comment/note to an MR |
+| `list_merge_request_notes` | `project_id`, `merge_request_iid`             | List notes/comments of an MR |
 | `list_issues`          | `project_id` (number), *optional:* `state`, `labels`, `iids` | List issues for project |
 | `create_issue`         | `project_id`, `title`, *optional:* `description`, `labels`, `assignee_ids`, `due_date`, `confidential`, `issue_type` | Create an issue |
 | `get_issue`            | `project_id`, `issue_iid`                        | Get a single issue |
@@ -136,7 +148,7 @@ Or with explicit path to `server.js`:
 | `update_wiki_page`     | `project_id`, `slug`, *optional:* `title`, `content`, `format` | Update an existing wiki page (at least title or content) |
 | `delete_wiki_page`     | `project_id`, `slug`                             | Delete a wiki page |
 
-Project IDs are numeric. Wiki page slug is the URL-friendly identifier (e.g. from title; use the slug returned by create/list/get). Issue IID is the project-internal issue number (e.g. `#3` → `issue_iid: 3`).
+Project IDs are numeric. Wiki page slug is the URL-friendly identifier (e.g. from title; use the slug returned by create/list/get). Issue IID and merge request IID are project-internal numbers (e.g. issue `#3` -> `issue_iid: 3`, MR `!7` -> `merge_request_iid: 7`).
 
 ---
 
