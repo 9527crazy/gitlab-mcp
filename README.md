@@ -5,6 +5,8 @@
 ## Features
 
 - **list_projects** — List all GitLab projects (membership-based, up to 100)
+- **create_project** — Create a new GitLab project
+- **update_project** — Update an existing GitLab project
 - **list_commits** — List repository commits for a project
 - **get_contribution_activity** — Get a user's contribution heatmap activity aggregated by day
 - **get_file** — Get file content from a project at a given ref (branch/tag/commit)
@@ -32,7 +34,7 @@
 
 - Node.js 18+
 - GitLab instance (self-hosted or GitLab.com)
-- GitLab [Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) or [Project/Group Access Token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) with `read_api` for read operations, `read_user` or `api` for contribution activity, and `api` for creating/updating/merging merge requests, creating/updating/deleting issues, adding notes, and managing wiki pages
+- GitLab [Personal Access Token](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html) or [Project/Group Access Token](https://docs.gitlab.com/ee/user/project/settings/project_access_tokens.html) with `read_api` for read operations, `read_user` or `api` for contribution activity, and `api` for creating/updating projects (Maintainer+ on the target namespace or project), creating/updating/merging merge requests, creating/updating/deleting issues, adding notes, and managing wiki pages
 
 ## Installation
 
@@ -125,6 +127,8 @@ Or with explicit path to `server.js`:
 | Tool                   | Parameters                                      | Description |
 |------------------------|--------------------------------------------------|-------------|
 | `list_projects`        | —                                               | List projects (membership, per_page=100) |
+| `create_project`       | `name`, *optional:* `path`, `namespace_id`, `description`, `visibility`, `initialize_with_readme`, `default_branch`, `topics`, `import_url` | Create a new project. Do not set `import_url` and `initialize_with_readme` together |
+| `update_project`       | `project_id` (number or path), *optional:* `name`, `path`, `description`, `visibility`, `default_branch`, `topics`, `archived` | Update a project (at least one optional field). Requires Maintainer or Owner |
 | `list_commits`         | `project_id` (number)                            | List commits for project |
 | `get_contribution_activity` | *optional:* `user_id`, `after`, `before`, `action`, `target_type`, `include_events`, `max_pages` | Get contribution heatmap activity aggregated by day. Defaults to the authenticated user and the last 12 months |
 | `get_file`             | `project_id`, `file_path`, `ref`                 | Get file content at ref |

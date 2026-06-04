@@ -113,6 +113,8 @@ const normalizeArray = (value) => {
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     { name: "list_projects", description: "List all GitLab projects", inputSchema: { type: "object" } },
+    { name: "create_project", description: "Create a new GitLab project", inputSchema: { type: "object", properties: { name: { type: "string" }, path: { type: "string" }, namespace_id: { type: "number" }, description: { type: "string" }, visibility: { type: "string", description: "private, internal, or public" }, initialize_with_readme: { type: "boolean" }, default_branch: { type: "string" }, topics: { type: "array", items: { type: "string" } }, import_url: { type: "string" } }, required: ["name"] } },
+    { name: "update_project", description: "Update an existing GitLab project (provide at least one field besides project_id)", inputSchema: { type: "object", properties: { project_id: { oneOf: [{ type: "number" }, { type: "string" }] }, name: { type: "string" }, path: { type: "string" }, description: { type: "string" }, visibility: { type: "string", description: "private, internal, or public" }, default_branch: { type: "string" }, topics: { type: "array", items: { type: "string" } }, archived: { type: "boolean" } }, required: ["project_id"] } },
     { name: "list_commits", description: "List commits of a project", inputSchema: { type: "object", properties: { project_id: { type: "number" } }, required: ["project_id"] } },
     { name: "get_contribution_activity", description: "Get a user's contribution heatmap activity aggregated by day. Defaults to the authenticated user and the last 12 months.", inputSchema: { type: "object", properties: { user_id: { oneOf: [{ type: "number" }, { type: "string" }], description: "GitLab user ID or username. If omitted, uses the authenticated user." }, after: { type: "string", description: "Start date in YYYY-MM-DD format. Defaults to 12 months ago." }, before: { type: "string", description: "End date in YYYY-MM-DD format. Defaults to today." }, action: { type: "string", description: "Optional GitLab event action filter, such as pushed, created, merged, closed, commented." }, target_type: { type: "string", description: "Optional GitLab event target type filter, such as issue, merge_request, note, project, snippet, milestone, user." }, include_events: { type: "boolean", description: "Include raw GitLab events in the response. Defaults to false." }, max_pages: { type: "number", description: "Maximum event pages to fetch at 100 events per page. Defaults to 20." } } } },
     { name: "get_file", description: "Get a file content", inputSchema: { type: "object", properties: { project_id: { type: "number" }, file_path: { type: "string" }, ref: { type: "string" } }, required: ["project_id","file_path","ref"] } },
@@ -146,6 +148,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     if (name === "list_projects") {
       const res = await api.get("/projects?membership=true&per_page=100");
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    }
+
+    if (name === "create_project") {
+      if (args.import_url && args.initialize_with_readme === true) {
+        return { content: [{ type: "text", text: "Error: import_url and initialize_with_readme cannot both be set." }] };
+      }
+      const body = { name: args.name };
+      addOptionalFields(body, args, ["path", "namespace_id", "description", "visibility", "initialize_with_readme", "default_branch", "import_url"]);
+      if (args.topics != null) body.topics = normalizeArray(args.topics);
+      const res = await api.post("/projects", body);
+      return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
+    }
+
+    if (name === "update_project") {
+      const body = {};
+      addOptionalFields(body, args, ["name", "path", "description", "visibility", "default_branch", "archived"]);
+      if (args.topics != null) body.topics = normalizeArray(args.topics);
+      if (Object.keys(body).length === 0) return { content: [{ type: "text", text: "Error: provide at least one field to update." }] };
+      const res = await api.put(`/projects/${encodeURIComponent(args.project_id)}`, body);
       return { content: [{ type: "text", text: JSON.stringify(res.data, null, 2) }] };
     }
 
